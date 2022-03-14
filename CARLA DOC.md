@@ -1,6 +1,10 @@
-# CARLA DOC
+# CARLA 基础
 
 - 记录与引用来自 `carla.readthedocs.io`
+
+[TOC]
+
+
 
 ## A. World and client
 
@@ -651,4 +655,81 @@ sensor02.listen(callback)
 | Radar（雷达）               | [carla.RadarMeasurement](https://carla.readthedocs.io/en/0.9.10/python_api#carlaradarmeasurement) | 2D point map modelling elements in sight and their movement regarding the sensor. |
 | RSS（**安全检测相关**）     | [carla.RssResponse](https://carla.readthedocs.io/en/0.9.10/python_api#carlarssresponse) | Modifies the controller applied to a vehicle according to safety  checks. This sensor works in a different manner than the rest, and there is specific [RSS documentation](https://carla.readthedocs.io/en/0.9.10/adv_rss) for it. |
 | Semantic LIDAR（语义LIDAR） | [carla.SemanticLidarMeasurement](https://carla.readthedocs.io/en/0.9.10/python_api#carlasemanticlidarmeasurement) | A rotating LIDAR. Generates a 3D point cloud with extra information regarding instance and semantic segmentation. |
+
+
+
+
+
+# Traffic Manager
+
+- 交通管理器，内容来自carla[官方文档(0.9.10)](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#what-is-it)
+
+- 简称TM，vehicle的autopilot设置为true时，TM会去管理注册（register）在其下的vehicle控制他们，其余车辆视为未注册
+- 由用户控制设置，可以模拟现实或是一些特殊环境
+
+## 结构 Architecture
+
+![img](https://carla.readthedocs.io/en/0.9.10/img/tm_2_architecture.jpg)
+
+> each relevant component has its equivalent in the C++ code (.cpp files) inside `LibCarla/source/carla/trafficmanager`
+
+### 1. 存储和更新当前模拟状态
+
+[ALSM](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#ALSM) (Agent Lifecycle & State Management) 扫描全局，清理无效实体，更新其他实体状态
+
+[vehicle registry](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#vehicle-registry) 存储了所有的已注册vehicle
+
+[simulation state](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#simulation-state) 在cache中，存储所有车和人的速度、位置和一些额外信息
+
+### 2. 计算所有注册车辆的移动
+
+ Control Loop创建**synchronization barriers（同步屏障）**来保证同步一致计算
+
+计算阶段：
+
+- **[Localization Stage](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#stage-1-localization-stage).**
+  - **TM的车没有预先定义的路线，十字口和道路都是随机选的**
+  - [In-Memory Map](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#in-memory-map) 将地图简化为grid网格和waypoint导航点，创建一个由很多导航点组成的near-future近期未来路径去行驶。每个车辆的路径信息会存在 [PBVT](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#PBVT)  (Path Buffers & Vehicle Tracking)，方便未来查询和修改
+
+- **[Collision Stage](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#stage-2-collision-stage).**
+  - 使bounding box延伸检查可能的碰撞危险，必要时进行管理
+
+- **[Traffic Light Stage](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#stage-3-traffic-light-stage)**
+  - 检查红绿灯影响、停止路标或交叉路口的潜在危险
+- **[Motion Planner Stage](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#stage-4-motion-planner-stage).**
+  - 当路线决定后这里计算车辆移动，使用一个PID控制器来决定车辆动作，这会转化为carla指令操作
+
+### 3. 在模拟器里执行指令
+
+最终TM对每辆车给出了下一步的指令，只需应用即可。所有指令会存在 [command array](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#command-array)作为batch发送给CARLA服务器端保证在同一帧同时应用
+
+### ALSM
+
+- 扫描跟踪所有的车和人的速度与位置，如果应用了物理则直接用 [Vehicle.get_velocity()](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#python_api.md#carla.Vehicle) 获取速度，否则根据时间和位置更新计算速度
+- 在[simulation state](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#simulation-state)模块存储了所有的车和人的速度、位置和附加信息
+- 更新 [vehicle registry](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#vehicle-registry) 列表中的车
+- 更新[control loop](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#control-loop) 和 [PBVT](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#pbvt) 的实体，与注册的车相对应
+
+### Command array（wait for looking）
+
+### Control loop（wait for looking）
+
+### In-Memory Map（wait for looking）
+
+### PBVT
+
+- 有一套双端队列映射到每个vehicle
+- 每个vehicle都有一组waypoint和near-future路径
+- 包含[In-Memory Map](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#in-memory-map)，这会在[Localization Stage](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#localization-stage)用来确定每个vehicle的最近waypoint和可能重叠的路径
+
+### PID controller
+
+- 执行计算，通过收集的信息估计**油门、刹车和转向输入**
+- 如果有需要可以修改特定参数做调整
+
+### Simulation state
+
+- **存储模拟世界中的每一辆车的信息，任何时候都可以轻松访问**
+- 从ALSM接收状态、附加信息等（例如的附加信息像是否受信号灯影响或信号灯状态等）
+- 所有信息缓存在cache里，因此 [control loop](https://carla.readthedocs.io/en/0.9.10/adv_traffic_manager/#control-loop) 中不用额外对服务器调用
 
