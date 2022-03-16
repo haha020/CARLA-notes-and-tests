@@ -6,7 +6,7 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import gym
-import gym_carla
+import CarlaGymEnv
 import carla
 
 def main():

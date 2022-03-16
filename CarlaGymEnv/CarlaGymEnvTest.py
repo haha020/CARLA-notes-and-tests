@@ -108,7 +108,7 @@ class CarlaGymEnvTest(gym.Env):
                 self.walker_spawn_points.append(spawn_point)
 
         # Create the ego vehicle blueprint
-        self.ego_bp = self._create_vehicle_bluepprint(
+        self.ego_bp = self._create_vehicle_blueprint(
             params['ego_vehicle_filter'], color='49,8,8')
 
         # Collision sensor
@@ -122,7 +122,7 @@ class CarlaGymEnvTest(gym.Env):
         self.lidar_height = 2.1
         self.lidar_trans = carla.Transform(
             carla.Location(x=0.0, z=self.lidar_height))
-        self.lidar_bp = self.blueprint_library_cache_library().find('sensor.lidar.ray_cast')
+        self.lidar_bp = self.blueprint_library_cache.find('sensor.lidar.ray_cast')
         self.lidar_bp.set_attribute('channels', '32')
         self.lidar_bp.set_attribute('range', '5000')  # 5km LIDRA......
 
@@ -130,7 +130,7 @@ class CarlaGymEnvTest(gym.Env):
         self.camera_img = np.zeros(
             (self.obs_size, self.obs_size, 3), dtype=np.uint8)
         self.camera_trans = carla.Transform(carla.Location(x=0.8, z=1.7))
-        self.camera_bp = self.blueprint_library_cache_library().find('sensor.camera.rgb')
+        self.camera_bp = self.blueprint_library_cache.find('sensor.camera.rgb')
         # Modify the attributes of the blueprint to set image resolution and field of view.
         self.camera_bp.set_attribute('image_size_x', str(self.obs_size))
         self.camera_bp.set_attribute('image_size_y', str(self.obs_size))
@@ -342,7 +342,7 @@ class CarlaGymEnvTest(gym.Env):
         bp: the blueprint object of carla.
         """
         # blueprints = self.world.get_blueprint_library() # maybe error with map -> base::at
-        blueprint_library = self.blueprint_library_cache
+        blueprints = self.blueprint_library_cache
         blueprints = blueprints.filter(actor_filter)
         blueprint_library = []
         for nw in number_of_wheels:
