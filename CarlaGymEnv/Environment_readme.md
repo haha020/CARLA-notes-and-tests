@@ -328,3 +328,14 @@ info = {
 
 - rgb转换到pygame的surface
 - return surface
+
+
+
+# render.py
+
+- 渲染pygame的观测和鸟瞰图的定义
+
+
+
+# route_planner.py
+
