@@ -323,7 +323,7 @@ class CarlaGymEnvTest(gym.Env):
             Bool indicating whether the spawn is successful.
         """
         blueprint = self._create_vehicle_blueprint(
-            'vehicle.*', number_of_wheels=number_of_wheels)
+            'vehicle.*.*', number_of_wheels=number_of_wheels)
         blueprint.set_attribute('role_name', 'autopilot')
         vehicle = self.world.try_spawn_actor(blueprint, transform)
         if vehicle is not None:
@@ -609,12 +609,12 @@ class CarlaGymEnvTest(gym.Env):
                         vh_regr[pixel[0], pixel[1], :] = np.array(
                             [cos_t, sin_t, dx, dy, logw, logl])
 
-        # Flip the image matrix so that the origin is at the left-bottom
-        vh_clas = np.flip(vh_clas, axis=0)
-        vh_regr = np.flip(vh_regr, axis=0)
+            # Flip the image matrix so that the origin is at the left-bottom
+            vh_clas = np.flip(vh_clas, axis=0)
+            vh_regr = np.flip(vh_regr, axis=0)
 
-        # Pixor state, [x, y, cos(yaw), sin(yaw), speed]
-        pixor_state = [ego_x, ego_y, np.cos(ego_yaw), np.sin(ego_yaw), speed]
+            # Pixor state, [x, y, cos(yaw), sin(yaw), speed]
+            pixor_state = [ego_x, ego_y, np.cos(ego_yaw), np.sin(ego_yaw), speed]
 
         obs = {
             'camera':camera.astype(np.uint8),
