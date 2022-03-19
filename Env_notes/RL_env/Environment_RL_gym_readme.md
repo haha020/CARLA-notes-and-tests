@@ -25,7 +25,7 @@ carla_env_v1.py， 来自**[RL-frenet-trajectory-planning-in-CARLA](https://gith
 | LANE_WIDTH                            | 车道宽度                                                   |
 | N_SPAWN_CARS                          | 车辆生成数                                                 |
 | **\# frenet**                         | **frenet 坐标用（frenet坐标是(s, d)）**                    |
-| f_idx                                 |                                                            |
+| f_idx                                 | frenet的index                                              |
 | init_s                                | 初始的s                                                    |
 | max_s                                 | 最长s                                                      |
 | track_length                          | track长度                                                  |
@@ -51,7 +51,7 @@ carla_env_v1.py， 来自**[RL-frenet-trajectory-planning-in-CARLA](https://gith
 | state                                 |                                                            |
 | **\# instances**                      | **实体信息**                                               |
 | ego                                   | 自己的车车                                                 |
-| ego_los_sensor                        |                                                            |
+| ego_los_sensor                        | LineOfSightSensor                                          |
 | module_manager                        |                                                            |
 | world_module                          |                                                            |
 | traffic_module                        |                                                            |
@@ -61,7 +61,7 @@ carla_env_v1.py， 来自**[RL-frenet-trajectory-planning-in-CARLA](https://gith
 | init_transform                        | 自车的初始transform                                        |
 | acceleration_                         |                                                            |
 | eps_rew                               |                                                            |
-| actor_enumerated_dict                 |                                                            |
+| actor_enumerated_dict                 | 总的dict，每个网格的信息都在这里，可以给lstm提取历史       |
 | actor_enumeration                     |                                                            |
 | side_window                           |                                                            |
 | **motionPlanner**                     |                                                            |
@@ -96,6 +96,86 @@ carla_env_v1.py， 来自**[RL-frenet-trajectory-planning-in-CARLA](https://gith
 
 
 ## step(self, action=None):
+
+- 初始化init
+
+  - n_step+=1
+  - ego dict设置
+
+- Motion Planner
+
+  - 得到speed速度，acc加速度，psi转角，location位置给到ego_state
+
+  - `ego_state = [self.ego.get_location().x, self.ego.get_location().y, speed, acc, psi, temp, self.max_s]`
+
+    - temp是ego的速度和加速度矢量（3D vector）
+    - self.max_s是最长的s设置
+
+  - 然后这些给到MotionPlanner的**run_step_single_path**（这个见下方的MotionPlanner里的函数）
+
+    `fpath, self.lanechange, off_the_road = self.motionPlanner.run_step_single_path(ego_state, self.f_idx, df_n=action, Tf=5, Vf_n=-1)`
+
+    得到生成frenet路径，车道变化信息和出道信息
+
+- Controller
+
+  - 控制层的东西，直接给了自己的vehicleController信息生成命令，命令给到carla模拟器就好
+
+- Draw Waypoints
+
+  - play_mode下的控制绘画
+
+- Update Carla
+
+  - `self.module_manager.tick()  # Update carla world`
+  - render
+  - 计算碰撞和自身信息
+
+- RL Observation
+
+  - 这个是next_obs的生成
+  - 除了print以外，就是这个**`self.fix_representation()`**
+
+- RL Reward Function
+
+  - 奖励函数设置
+
+-  Episode Termination
+
+  - 终止条件设置
+
+
+
+## fix_representation(self):
+
+> ```python
+> """
+> Given the traffic actors fill the desired tensor with appropriate values and time_steps
+> """
+> ```
+
+这个是生成网格周边车辆并填充空白为-1的方法
+
+- 首先是计算周围车辆：枚举，调用方法**`self.enumerate_actors()`**在后续函数部分
+- 然后是对look_back的长度取历史，截取拼接形成lstm_obs，返回这个组合向量
+
+
+
+## enumerate_actors(self):
+
+> ```python
+> """
+> Given the traffic actors and ego_state this fucntion enumerate actors, calculates their relative positions with
+> to ego and assign them to actor_enumerated_dict.
+> Keys to be updated: ['LEADING', 'FOLLOWING', 'LEFT', 'LEFT_UP', 'LEFT_DOWN', 'LLEFT', 'LLEFT_UP',
+> 'LLEFT_DOWN', 'RIGHT', 'RIGHT_UP', 'RIGHT_DOWN', 'RRIGHT', 'RRIGHT_UP', 'RRIGHT_DOWN']
+> """
+> ```
+
+- 每个道路都做一个check检测，然后筛选车辆放入网格图
+  - 如果没车就是-1，如果出车道就算-2
+  - 车道的划分是按照d计算的，**所以这里的所有计算其实是按d的值离散到车道那样子，然后控制会去走定车道中线**
+  - 返回填充的网格信息
 
 
 
@@ -139,11 +219,47 @@ carla_env_v1.py， 来自**[RL-frenet-trajectory-planning-in-CARLA](https://gith
 | KLAT                | 1.0                                                          |
 | KLON                | 1.0                                                          |
 
+关于后续计算可能出现的s,s_d,s_dd,s_ddd,d,d_d,d_dd,d_ddd：
 
+![image-20220319105712669](/home/yihang/snap/typora/57/.config/Typora/typora-user-images/image-20220319105712669.png)
 
 ### start(self, route):
 
 steps置零，然后update_global_route(route)在下方
+
+
+
+### reset(self, s, d, df_n=0, Tf=4, Vf_n=0, optimal_path=True):
+
+reset，然后找optimal_path或者**generate_single_frenet_path**
+
+
+
+### generate_single_frenet_path(self, f_state, df=0, Tf=4, Vf=30 / 3.6):
+
+> ```python
+> """
+> generate a single frenet path based on the current and terminal frenet state values
+> input: ego's current frenet state and terminal frenet values (lateral displacement, time of arrival, and speed)
+> output: single frenet path
+> """
+> ```
+
+
+
+
+
+### calc_global_paths(self, fplist):
+
+> ```python
+> """
+> transform paths from frenet frame to inertial frame
+> input: path list
+> output: path list
+> """
+> ```
+
+
 
 
 
@@ -158,6 +274,43 @@ global_route信息取出然后放入**cubic_spline_planner.Spline3D**计算csp
 >  self.csp = None  \# cubic spline for global rout
 
 **cubic_spline_planner.Spline3D**看上去是一个专门计算三次样条曲线的库，和数学很关联就先不细看了
+
+
+
+### run_step_single_path(self, ego_state, idx, df_n=0, Tf=4, Vf_n=0):
+
+> ```python
+> """
+> input: ego states, current frenet path's waypoint index, actions
+> output: frenet path
+> actions: final values for frenet lateral displacement (d), time, and speed
+> """
+> ```
+
+- 首先step+=1
+- 然后转到**estimate_frenet_state**估计frenet的状态
+- 接下来计算信息和路径，返回
+
+
+
+
+
+
+
+### estimate_frenet_state(self, ego_state, idx):
+
+> ```python
+> """
+> estimate the frenet state based on ego state and the current frenet state
+> procedure: - initialize the estimation with the last frenet state
+>            - check the error btw ego true position and the frenet's estimation of global position # btw = between
+>            - if error larger than threshold, update the frenet state
+> """
+> ```
+
+
+
+
 
 
 
@@ -193,6 +346,10 @@ self.global_csp = global_route_csp
 
 
 
+
+
+
+
 ## TrafficManager
 
 ### \_\_init\_\_(self, name, module_manager):
@@ -208,6 +365,10 @@ self.global_csp = global_route_csp
 ```python
 self.global_csp = global_route_csp
 ```
+
+
+
+
 
 
 
@@ -279,6 +440,8 @@ self.clear_modules()
 pygame.quit()
 sys.exit()
 ```
+
+
 
 
 
