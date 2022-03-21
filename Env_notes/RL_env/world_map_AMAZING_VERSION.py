@@ -487,7 +487,7 @@ class TrafficActors():
     def __init__(self, world) -> None:
         # self.vehicle_list = []
         self.vehicle_spawn_points = []
-        self.number_of_vehicle = 80
+        self.number_of_vehicle = 20
 
         # self.walker_list = []
         self.walker_spawn_points = []
@@ -866,10 +866,6 @@ class StateSaver():
         surface = blit_surface
         aclist = self.carla_world.get_actors()
         atlist = [(actor, actor.get_transform()) for actor in aclist]
-        for actor in aclist:
-            if 'vehicle' in actor.type_id:
-                actor.set_autopilot(True, self.tm_port)
-                self.traffic_manager.ignore_lights_percentage(actor, 100)
         actor_with_trans_vehicle, _, _, actor_with_trans_walker = _split_actors(
             atlist)
         print('-'*50, actor_with_trans_vehicle, actor_with_trans_walker)

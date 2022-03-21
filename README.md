@@ -1,7 +1,11 @@
 # CARLA-notes-and-tests
 some notes and tests or （translation?）
 
-#### ——Start from 2022.03.12——
+**This program starting form 2022.03.12**
+
+
+
+#### ——Start Update 2022.03.12——
 - Update： 
   - Check the doc for some translation...
 
@@ -27,3 +31,15 @@ some notes and tests or （translation?）
   - Thanks to [RL-frenet-trajectory-planning-in-CARLA](https://github.com/MajidMoghadam2006/RL-frenet-trajectory-planning-in-CARLA) :)
 - Info
   - New folders structure was used, may be a little puzzled
+
+
+
+#### ——State update 2022.03.21——
+
+- Update:
+  - get some funny screens on pygame!
+  - add a render and our hero window ( from other codes :) )
+  - *FUNNY CARLA*
+- Info
+  - Maybe we need last version to track or ...?
+
