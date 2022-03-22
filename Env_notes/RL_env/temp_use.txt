@@ -1,0 +1,36 @@
+# Apply clipping rect
+        # clipping_rect = pygame.Rect(translation_offset[0],
+        #                             translation_offset[1],
+        #                             hero_surface.get_width(),
+        #                             hero_surface.get_height())
+        # 绕pointx,pointy逆时针旋转
+        import numpy as np
+        def Nrotate(angle,valuex,valuey,pointx,pointy):
+            angle = math.radians(angle)
+            valuex = np.array(valuex)
+            valuey = np.array(valuey)
+            nRotatex = (valuex-pointx)*math.cos(angle) - (valuey-pointy)*math.sin(angle) + pointx
+            nRotatey = (valuex-pointx)*math.sin(angle) + (valuey-pointy)*math.cos(angle) + pointy
+            return nRotatex, nRotatey
+        # 绕pointx,pointy顺时针旋转
+        def Srotate(angle,valuex,valuey,pointx,pointy):
+            angle = math.radians(angle)
+            valuex = np.array(valuex)
+            valuey = np.array(valuey)
+            sRotatex = (valuex-pointx)*math.cos(angle) + (valuey-pointy)*math.sin(angle) + pointx
+            sRotatey = (valuey-pointy)*math.cos(angle) - (valuex-pointx)*math.sin(angle) + pointy
+            return sRotatex,sRotatey  
+        tmp = result_surface.copy()
+        rotated_result_surface = pygame.transform.rotozoom(
+            tmp, angle, 1).convert()
+        rotate_center = rotated_result_surface.get_rect().center
+        print("center: ",rotate_center)
+        print("pre:", translation_offset)
+        if angle >= 0:
+            tx, ty =  Srotate(angle, *translation_offset, *rotate_center)
+        else:
+            tx, ty =  Nrotate(-angle, *translation_offset, *rotate_center)
+        hero_surface.blit(rotated_result_surface,(-tx, -ty))
+        print("after:", tx,'   -   ',ty)
+        print("angle:", angle)
+        # rotated_result_surface.set_clip(clipping_rect)

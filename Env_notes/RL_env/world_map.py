@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# Copyright (c) 2022: haha020 (jbtjbtjbt@126.com)
+# Improved by lj020
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 # Copyright (c) 2019 Computer Vision Center (CVC) at the Universitat Autonoma de
 # Barcelona (UAB).
 # Improved by Majid Moghadam - UCSC - ASL
@@ -487,7 +492,7 @@ class TrafficActors():
     def __init__(self, world) -> None:
         # self.vehicle_list = []
         self.vehicle_spawn_points = []
-        self.number_of_vehicle = 80
+        self.number_of_vehicle = 10
 
         # self.walker_list = []
         self.walker_spawn_points = []
@@ -612,8 +617,17 @@ class StateSaver():
         self.display = None
         self.ego_vehicle = None
 
-        # state saving time
+        # image size
         self.init_pygame()
+        self.needed_size = (400,600)
+        self.ego_image_surface = pygame.Surface(self.needed_size).convert()
+        cx = self.needed_size[0]/2
+        cy = self.needed_size[1]/2
+        circle_r = math.ceil(math.sqrt(cx**2+cy**2))
+        self.squ_len = 2*circle_r
+
+        # state saving time
+        
         self._spawn_ego_hero()
         self.MapImageModule = MapImage(
             self.carla_world, self.town_map, PIXELS_PER_METER,  False, False, True)
@@ -664,7 +678,7 @@ class StateSaver():
         hero_actor = self.ego_vehicle
         hero_transform = hero_actor.get_transform()
         angle = 0.0 if hero_actor is None else hero_transform.rotation.yaw + 90.0
-        hero_surface = pygame.Surface((400, 600)).convert()
+        hero_surface = pygame.Surface((self.squ_len, self.squ_len)).convert()
         hero_location_screen = self.MapImageModule.world_to_pixel(
             hero_transform.location)
         hero_front = hero_transform.get_forward_vector()
@@ -679,16 +693,9 @@ class StateSaver():
              2 +
              hero_front.y *
              PIXELS_AHEAD_VEHICLE))
-        # Apply clipping rect
-        clipping_rect = pygame.Rect(translation_offset[0],
-                                    translation_offset[1],
-                                    hero_surface.get_width(),
-                                    hero_surface.get_height())
-        tmp = result_surface.copy()
         hero_surface.blit(result_surface, (-translation_offset[0],
-                                           -translation_offset[1]))
-        rotated_result_surface = pygame.transform.rotozoom(
-            hero_surface, angle, 0.9).convert()
+                                                 -translation_offset[1]))
+        rotated_result_surface = pygame.transform.rotozoom(hero_surface, angle, 1).convert()
         return rotated_result_surface
 
     def windowTest(self):
@@ -697,7 +704,8 @@ class StateSaver():
         self.traffic_manager.ignore_lights_percentage(self.ego_vehicle, 100)
         self.traffic_manager.vehicle_percentage_speed_difference(
             self.ego_vehicle, -100)
-        self.MapImageModule.scale_map(0.4)
+        # 用这个调控image大小吧，如果需要个全局可能再来个ImageModule
+        self.MapImageModule.scale_map(0.8)
         # end test use
         try:
             for i in count():
@@ -709,7 +717,11 @@ class StateSaver():
                 self.display.blit(blit_surface, (0, 0))
                 # here is cutcut
                 sample_surface = self.hero_surface_blit(blit_surface)
-                self.display.blit(sample_surface, (1200, 100))
+                center = (self.ego_image_surface.get_width() / 2, self.ego_image_surface.get_height() / 2)
+                rotation_pivot = sample_surface.get_rect(center=center)
+                self.ego_image_surface.blit(sample_surface, (rotation_pivot))
+                # pygame.image.save(self.big_map_surface, map_file_name)
+                self.display.blit(self.ego_image_surface, (1250, 200))
                 pygame.display.flip()
                 if i >= 1e6:
                     break
@@ -826,7 +838,7 @@ class StateSaver():
                            ]
                 v[1].transform(corners)
                 corners = [world_to_pixel(p) for p in corners]
-                print(corners)
+                # print(corners)
                 pygame.draw.lines(surface, color, False, corners, int(
                     math.ceil(4.0 * scale)))
 
@@ -872,7 +884,7 @@ class StateSaver():
                 self.traffic_manager.ignore_lights_percentage(actor, 100)
         actor_with_trans_vehicle, _, _, actor_with_trans_walker = _split_actors(
             atlist)
-        print('-'*50, actor_with_trans_vehicle, actor_with_trans_walker)
+        # print('-'*50, actor_with_trans_vehicle, actor_with_trans_walker)
         render_actors(self.MapImageModule, surface,  actor_with_trans_vehicle,
                       0, 0, actor_with_trans_walker)
 

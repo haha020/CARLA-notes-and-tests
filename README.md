@@ -37,9 +37,18 @@ some notes and tests or （translation?）
 #### ——State update 2022.03.21——
 
 - Update:
-  - get some funny screens on pygame!
-  - add a render and our hero window ( from other codes :) )
+  - Get some funny screens on pygame!
+  - Add a render and our hero window ( from other codes :) )
   - *FUNNY CARLA*
 - Info
   - Maybe we need last version to track or ...?
 
+
+
+#### ——Image update 2022.03.22——
+
+- Update:
+  - True Image Show!
+  - fix some bug
+- Info
+  - Maybe I will not UPDATE for next days? ( or months )
